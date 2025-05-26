@@ -7,6 +7,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
+datasets = ">=3.6.0"
+torch = "^2.0.0"
+torchaudio = "^2.0.0"
+transformers = "^4.52.0"
 pre-commit = "^4.2.0"
 
 [build-system]
@@ -14,7 +18,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.black]
-line-length = 88
+line-length = 120
 target-version = ['py39', 'py310', 'py311']
 include = '\.pyi?$'
 extend-exclude = '''
@@ -37,7 +41,7 @@ extend-exclude = '''
 
 [tool.isort]
 profile = "black"
-line_length = 88
+line_length = 120
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0
@@ -46,7 +50,7 @@ ensure_newline_before_comments = true
 skip = ["models_sampled", "datasets"]
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py39"
 
 select = [
