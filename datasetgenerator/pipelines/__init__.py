@@ -1,5 +1,7 @@
 from .audio_transforms import normalize_audio
-from .base import ProcessingPipeline
-from .text_transforms import process_same_labels
+from .base import AudioProcessingPipeline, ProcessingPipeline
+from .registry import STR2PIPELINE
 
-__all__ = ["ProcessingPipeline", "normalize_audio", "process_same_labels"]
+# from .text_transforms import process_same_labels, remove_special_characters
+
+__all__ = ["ProcessingPipeline", "AudioProcessingPipeline", "normalize_audio", "process_same_labels", "STR2PIPELINE"]

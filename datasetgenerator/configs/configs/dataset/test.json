@@ -1,10 +1,10 @@
 [
     {
-        "dataset_name": "amu-cai/CAMEO",
-        "subset_name": null,
-        "split": ["crema_d", "emns"],
+        "dataset_name": "cgeorgiaw/animal-sounds",
+        "subset_name": ["birds"],
+        "split": ["train"],
         "audio_column": "audio",
-        "target_column": "emotion",
+        "target_column": "label",
         "sample_rate": 16000,
         "max_duration_s": 5
     },
@@ -15,6 +15,7 @@
         "audio_column": "audio",
         "target_column": "genre",
         "sample_rate": 16000,
-        "max_duration_s": 5
+        "max_duration_s": 5,
+        "steps_to_skip": ["remove_special_characters"]
     }
 ]

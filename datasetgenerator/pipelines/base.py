@@ -1,13 +1,24 @@
+from abc import ABC, abstractmethod
 from itertools import product
 from typing import Callable
 
-from datasetgenerator.configs import DatasetConfig, load_configs
 from datasets import Dataset
 
+from datasetgenerator.configs import DatasetConfig
 
-class ProcessingPipeline:
+from .audio_transforms import normalize_audio
+from .text_transforms import process_same_labels, remove_special_characters
+
+
+class ProcessingPipeline(ABC):
     def __init__(self):
         self.steps: list[tuple[str, Callable, dict]] = []
+        self._load_default_steps()
+
+    @abstractmethod
+    def _load_default_steps(self):
+        """Load default processing steps for the pipeline."""
+        raise NotImplementedError("Subclasses must implement _load_default_steps")
 
     def add_step(self, name: str, func: Callable, **kwargs):
         """Add a processing step to the pipeline."""
@@ -48,6 +59,10 @@ class ProcessingPipeline:
         print(f"Applying {len(self.steps)} processing steps to {dataset_name}")
 
         for step_name, func, kwargs in self.steps:
+            if config.steps_to_skip is not None and step_name in config.steps_to_skip:
+                print(f"  → Skipping step '{step_name}' as per configuration")
+                continue
+
             try:
                 print(f"  → Applying '{step_name}'...")
                 dataset = func(dataset, config, **kwargs)
@@ -57,3 +72,10 @@ class ProcessingPipeline:
                 raise
 
         return dataset
+
+
+class AudioProcessingPipeline(ProcessingPipeline):
+    def _load_default_steps(self):
+        self.add_step("normalize_audio", normalize_audio, batch_size=2)
+        self.add_step("remove_special_characters", remove_special_characters)
+        self.add_step("process_same_labels", process_same_labels)

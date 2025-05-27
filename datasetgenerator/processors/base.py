@@ -7,22 +7,24 @@ from itertools import product
 
 import numpy as np
 import torch
+from datasets import Audio, load_dataset
 from tqdm import tqdm
 
 from datasetgenerator.configs import AudioDatasetConfig, DatasetConfig, load_configs
-from datasetgenerator.pipelines import (
-    ProcessingPipeline,
-    normalize_audio,
-    process_same_labels,
-)
-from datasets import Audio, load_dataset
+from datasetgenerator.pipelines import ProcessingPipeline
 
 random.seed(42)  # For reproducibility
 
 
 class BaseProcessor(ABC):
-    def __init__(self, dataset_cfgs: list[DatasetConfig]):
+    def __init__(self, dataset_cfgs: list[DatasetConfig], pipelines: list[ProcessingPipeline] = None):
+        if not dataset_cfgs:
+            raise ValueError("dataset_cfgs must be provided and cannot be empty.")
+        if pipelines is None:
+            raise ValueError("pipelines must be provided and cannot be None.")
+
         self.dataset_cfgs = dataset_cfgs
+        self.pipelines = pipelines
 
     def _normalize_to_list(self, value):
         """Normalize value to always be a list."""
@@ -39,16 +41,20 @@ class BaseProcessor(ABC):
         """Load datasets based on the configurations provided."""
         pass
 
-    def process(self, pipeline: ProcessingPipeline, out_dataset_name: str = ""):
+    def process(self, out_dataset_name: str = ""):
         """Process the datasets."""
         self.load_datasets()
         print("Datasets loaded and processed.")
 
-        for dataset_name, items in self.datasets.items():
-            print(f"Processing dataset: {dataset_name}")
-            processed_dataset = pipeline.apply(items["dataset"], items["config"], dataset_name)
-            self.datasets[dataset_name]["dataset"] = processed_dataset
-            print(f"Dataset {dataset_name} processed successfully.")
+        for pipeline in self.pipelines:
+            print(f"Applying pipeline: {pipeline.__class__.__name__}")
+            pipeline.list_steps()
+
+            for dataset_name, items in self.datasets.items():
+                print(f"Processing dataset: {dataset_name}")
+                processed_dataset = pipeline.apply(items["dataset"], items["config"], dataset_name)
+                self.datasets[dataset_name]["dataset"] = processed_dataset
+                print(f"Dataset {dataset_name} processed successfully.")
 
         self.save_datasets(out_dataset_name)
 
@@ -133,16 +139,6 @@ class HuggingFaceProcessor(BaseProcessor):
 
                 dataset_list.append(row)
         random.shuffle(dataset_list)
+        print("total_examples:", len(dataset_list))
         with open(os.path.join(save_path, output_dataset_file), "w") as f:
             json.dump(dataset_list, f, indent=4)
-
-
-if __name__ == "__main__":
-    pipeline = ProcessingPipeline()
-    pipeline.add_step("normalize_audio", normalize_audio, batch_size=2)
-    pipeline.add_step("process_same_labels", process_same_labels)
-
-    # configs = load_configs("datasetgenerator/configs/configs/gliclass-audio.json", "audio")
-    configs = load_configs("./datasetgenerator/configs/configs/test.json", "audio")
-    processor = HuggingFaceProcessor(configs)
-    processor.process(pipeline, out_dataset_name="gliclass-audio-datset")

@@ -1,4 +1,3 @@
-import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
@@ -8,6 +7,7 @@ class DatasetConfig(ABC):
     dataset_name: str
     subset_name: str | list[str] | None = None
     split: str | None = None
+    steps_to_skip: list[str] | None = None
 
 
 @dataclass
@@ -23,13 +23,3 @@ class AudioDatasetConfig(DatasetConfig):
 
 
 TYPE2CONFIG = {"base": DatasetConfig, "audio": AudioDatasetConfig}
-
-
-def load_configs(file_path: str, config_type: str) -> list[DatasetConfig]:
-    if config_type not in TYPE2CONFIG:
-        raise ValueError(f"Unsupported config type: {config_type}")
-
-    with open(file_path) as file:
-        configs = json.load(file)
-
-    return [TYPE2CONFIG[config_type](**config) for config in configs]
