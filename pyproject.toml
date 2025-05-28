@@ -8,6 +8,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
 datasets = ">=3.6.0"
+librosa = ">=0.11.0"
+soundfile = ">=0.13.1"
 torch = "^2.0.0"
 torchaudio = "^2.0.0"
 transformers = "^4.52.0"

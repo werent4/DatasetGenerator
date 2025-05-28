@@ -46,13 +46,20 @@ class BaseProcessor(ABC):
         self.load_datasets()
         print("Datasets loaded and processed.")
 
-        for pipeline in self.pipelines:
+        for pipeline_name, pipeline  in self.pipelines:
             print(f"Applying pipeline: {pipeline.__class__.__name__}")
             pipeline.list_steps()
 
             for dataset_name, items in self.datasets.items():
+                config = items["config"]
+                dataset = items["dataset"]
+
+                if config.pipelines_to_skip is not None and pipeline_name in config.pipelines_to_skip:
+                    print(f"Skipping pipeline {pipeline.__class__.__name__} for dataset {dataset_name} due to configuration.")  
+                    continue
+
                 print(f"Processing dataset: {dataset_name}")
-                processed_dataset = pipeline.apply(items["dataset"], items["config"], dataset_name)
+                processed_dataset = pipeline.apply(dataset, config, dataset_name)
                 self.datasets[dataset_name]["dataset"] = processed_dataset
                 print(f"Dataset {dataset_name} processed successfully.")
 
@@ -88,7 +95,7 @@ class HuggingFaceProcessor(BaseProcessor):
 
         except Exception as e:
             print(f"Failed to load {cfg.dataset_name} (subset: {subset_name}, split: {split}): {e}")
-            return None, None
+            return None, None, None
 
     def load_datasets(self):
         self.datasets = {}
@@ -122,22 +129,34 @@ class HuggingFaceProcessor(BaseProcessor):
 
         dataset_list = []
         for dataset_identifier, items in self.datasets.items():
+            # if dataset_identifier != "disco-eth/EuroSpeech_subsetuk_splittrain":
+            #     continue
+
             dataset = items["dataset"]
             config = items["config"]
-            for _, example in enumerate(tqdm(dataset, desc=f"Creating: {out_dataset_name}", total=len(dataset))):
+            for _, example in enumerate(tqdm(dataset, desc=f"Creating: {out_dataset_name} from {dataset_identifier}", total=len(dataset))):
                 audio_data = example[f"{config.audio_column}_features"]
                 audio_path = self.save_audio_features(audio_data, audio_dir)
-                label = example[config.target_column].lower()
+
+                target_value = example[config.target_column]
+                if isinstance(target_value, str):
+                    true_labels = [target_value.lower()]
+                elif isinstance(target_value, list):
+                    true_labels = [label.lower() for label in target_value]
+
                 all_labels = example["all_labels"]
+                all_labels = [label.lower() for label in all_labels]
+
                 random.shuffle(all_labels)
                 row = {
                     "source_dataset": dataset_identifier,
+                    # "text": example["asr_transcript"],
                     "audio_features_path": audio_path,
                     "all_labels": all_labels,
-                    "true_labels": [label],
+                    "true_labels": true_labels,
                 }
-
                 dataset_list.append(row)
+
         random.shuffle(dataset_list)
         print("total_examples:", len(dataset_list))
         with open(os.path.join(save_path, output_dataset_file), "w") as f:

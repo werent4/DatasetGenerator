@@ -1,6 +1,5 @@
 import json
-
-from datasetgenerator.pipelines import STR2PIPELINE, ProcessingPipeline
+from datasetgenerator.pipelines import ProcessingPipeline, STR2PIPELINE
 
 from .dataset_configs import TYPE2CONFIG, DatasetConfig
 
@@ -17,7 +16,7 @@ def load_configs(
     for pipeline in processor_config["pipelines"]:
         if pipeline not in STR2PIPELINE:
             raise ValueError(f"Unsupported pipeline: {pipeline}")
-        pipelines.append(STR2PIPELINE[pipeline]())
+        pipelines.append((pipeline, STR2PIPELINE[pipeline]()))
 
     with open(datasets_config) as file:
         configs = json.load(file)

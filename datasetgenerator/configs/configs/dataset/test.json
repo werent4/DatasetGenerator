@@ -1,14 +1,5 @@
 [
     {
-        "dataset_name": "cgeorgiaw/animal-sounds",
-        "subset_name": ["birds"],
-        "split": ["train"],
-        "audio_column": "audio",
-        "target_column": "label",
-        "sample_rate": 16000,
-        "max_duration_s": 5
-    },
-    {
         "dataset_name": "jamendolyrics/jamendolyrics",
         "subset_name": "en",
         "split": "test",
@@ -16,6 +7,19 @@
         "target_column": "genre",
         "sample_rate": 16000,
         "max_duration_s": 5,
-        "steps_to_skip": ["remove_special_characters"]
+        "steps_to_skip": ["remove_special_characters"],
+        "pipelines_to_skip": ["annotator"]
+    },
+    {
+        "dataset_name": "disco-eth/EuroSpeech",
+        "subset_name": "uk",
+        "split": "train",
+        "audio_column": "audio",
+        "target_column": "label",
+        "annotation_column": "asr_transcript",
+        "sample_rate": 16000,
+        "max_duration_s": 5,
+        "steps_to_skip": ["process_same_labels"],
+        "pipelines_to_skip": []
     }
 ]

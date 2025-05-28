@@ -21,12 +21,23 @@ def remove_special_characters(dataset: Dataset, config: AudioDatasetConfig) -> D
     """
     Remove special characters from the dataset target_column.
     """
-
+    pattern = r"[^a-zA-Zа-яА-Я0-9\s]"
     def clean_text(example):
         text = example[config.target_column]
-        cleaned = re.sub(r"[^a-zA-Zа-яА-Я0-9\s]", " ", text)
-        cleaned = re.sub(r"\s+", " ", cleaned).strip()
-        example[config.target_column] = cleaned
+        if isinstance(text, str):
+            cleaned = re.sub(pattern, " ", text)
+            cleaned = re.sub(r"\s+", " ", cleaned).strip()
+            example[config.target_column] = cleaned
+        elif isinstance(text, list):
+            cleaned_list = []
+            for item in text:
+                if isinstance(item, str):
+                    cleaned = re.sub(pattern, " ", item)
+                    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+                    cleaned_list.append(cleaned)
+                else:
+                    cleaned_list.append(item) 
+            example[config.target_column] = cleaned_list
         return example
 
     dataset = dataset.map(clean_text)
