@@ -1,0 +1,42 @@
+[
+    {
+        "dataset_name": "amu-cai/CAMEO",
+        "subset_name": null,
+        "split": ["crema_d", "emns", "enterface", "jl_corpus"],
+        "audio_column": "audio",
+        "target_column": "emotion",
+        "pipelines_to_skip": ["annotator"]
+    },    
+    {
+        "dataset_name": "jamendolyrics/jamendolyrics",
+        "subset_name": "en",
+        "split": "test",
+        "audio_column": "audio",
+        "target_column": "genre",
+        "pipelines_to_skip": ["annotator"]
+    },
+    {
+        "dataset_name": "cgeorgiaw/animal-sounds",
+        "subset_name": ["birds", "giant_otter"],
+        "split": ["train"],
+        "audio_column": "audio",
+        "target_column": "label",
+        "pipelines_to_skip": ["annotator"]
+    },
+    {
+        "dataset_name": "cgeorgiaw/animal-sounds",
+        "subset_name": ["dogs"],
+        "split": ["train"],
+        "audio_column": "audio",
+        "target_column": "context",
+        "pipelines_to_skip": ["annotator"]
+    },
+    {
+        "dataset_name": "asapp/slue",
+        "subset_name": ["voxceleb"],
+        "split": ["train", "test"],
+        "audio_column": "audio",
+        "target_column": "sentiment",
+        "pipelines_to_skip": ["annotator"]
+    }
+]

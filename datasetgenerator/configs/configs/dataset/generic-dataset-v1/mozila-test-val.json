@@ -1,0 +1,12 @@
+[
+    {
+        "dataset_name": "mozilla-foundation/common_voice_17_0",
+        "subset_name": "en",
+        "split": ["validation", "test"],
+        "audio_column": "audio",
+        "target_column": "label",
+        "annotation_column": "sentence",
+        "steps_to_skip": ["process_same_labels"],
+        "pipelines_to_skip": []
+    }
+]

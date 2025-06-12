@@ -1,0 +1,58 @@
+Jinsaryko/Elise   -- 1.2k
+
+AbstractTTS/PODCAST   -- 149k
+
+mozilla-foundation/common_voice_17_0 subset en; split train + test + val ~~ 145k but may be hard for llm to generate labels
+
+slprl/TinyStress-15K  -- 15k +- norm data
+
+
+###
+jamendolyrics/jamendolyrics - classes - added -- processed
+amu-cai/CAMEO - classes -- added -- processed
+asapp/slue - classes -- added -- processed
+cgeorgiaw/animal-sounds - classes -- added  -- processed
+
+disco-eth/EuroSpeech - annotate (40k) -- added -- processed
+agkphysics/AudioSet - annotate (140k)
+AbstractTTS/PODCAST - annotate (150k)
+mozilla-foundation/common_voice_17_0 - annotate 
+slprl/TinyStress-15K - annotate (15k) -- added-- processed 
+###
+
+[
+    { 
+        "dataset_name": "AbstractTTS/PODCAST",
+        "split": "train",
+        "audio_column": "audio",
+        "target_column": "label",
+        "annotation_column": "transcription",
+        "sample_rate": 16000,
+        "max_duration_s": 20,
+        "steps_to_skip": ["remove_special_characters", "process_same_labels"],
+        "pipelines_to_skip": []
+    },
+    {
+        "dataset_name": "mozilla-foundation/common_voice_17_0",
+        "subset_name": "en",
+        "split": ["validation", "test"], # need train
+        "audio_column": "audio",
+        "target_column": "label",
+        "annotation_column": "sentence",
+        "sample_rate": 16000,
+        "max_duration_s": 20,
+        "steps_to_skip": ["remove_special_characters", "process_same_labels"],
+        "pipelines_to_skip": []
+    },
+    { 
+        "dataset_name": "slprl/TinyStress-15K",
+        "split": "train",
+        "audio_column": "audio",
+        "target_column": "label",
+        "annotation_column": "transcription",
+        "sample_rate": 16000,
+        "max_duration_s": 20,
+        "steps_to_skip": ["remove_special_characters", "process_same_labels"],
+        "pipelines_to_skip": []
+    }
+]

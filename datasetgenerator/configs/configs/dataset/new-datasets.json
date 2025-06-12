@@ -1,0 +1,13 @@
+[
+    { 
+        "dataset_name": "AbstractTTS/PODCAST",
+        "split": "train",
+        "audio_column": "audio",
+        "target_column": "label",
+        "annotation_column": "transcription",
+        "sample_rate": 16000,
+        "max_duration_s": 20,
+        "steps_to_skip": ["process_same_labels"],
+        "pipelines_to_skip": []
+    }
+]

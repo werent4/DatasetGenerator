@@ -84,7 +84,6 @@ class ProcessingPipeline(ABC):
 
 class AudioProcessingPipeline(ProcessingPipeline):
     def _load_default_steps(self):
-        self.add_step("normalize_audio", normalize_audio, batch_size=2)
         self.add_step("remove_special_characters", remove_special_characters)
         self.add_step("process_same_labels", process_same_labels)
 
@@ -94,12 +93,12 @@ SYSTEMMESSAGE = {
     "content": (
         "You are an advanced assistant trained to classify input text into relevant categories (labels) in English ONLY. \n"
         "Your task is to generate a JSON object with two fields:\n"
-        "- 'true_labels': up to 10 labels that are accurate and contextually appropriate for the input.\n"
-        "- 'false_labels': up to 10 incorrect but contextually challenging (hard negative) labels. These must be:\n"
+        "- 'true_labels': up to 4 labels that are accurate and contextually appropriate for the input.\n"
+        "- 'false_labels': up to 4 incorrect but contextually challenging (hard negative) labels. These must be:\n"
         "   • Semantically or topically close to the true labels,\n, for example, spf-15 as true label and spf-30 as false"
         "   • Plausible but factually or contextually wrong,\n"
         "   • Never completely random, absurd, or trivially incorrect.\n\n if true label is president, false should be like vise-president, not python programming language (not random)"
-        "There could be less then 10 labels if the text is short. The idea is that labels should be really related to the specific content"
+        "There could be less then 4 labels if the text is short. The idea is that labels should be really related to the specific content"
         "The output must be a VALID JSON object, structured as:\n"
         '{"true_labels": ["..."], "false_labels": ["..."]}'
     ),
@@ -185,11 +184,11 @@ class AnnotatorPipeline(ProcessingPipeline):
         return parsed_results
 
     def annotate_dataset(self, dataset: Dataset, config: DatasetConfig) -> str:
-        dataset = dataset.select(range(6))
+        # dataset = dataset.select(range(6))
 
-        batch_size = 2
+        batch_size = 16
         annotation_column = dataset[config.annotation_column]
-        example_dataset = json.load(open('/home/werent4/DatasetGenerator/datasetgenerator/datasets/example/example_dataset.json', 'r', encoding='utf-8'))
+        example_dataset = json.load(open('/home/werent4/DatasetGenerator/datasets/example_dataset.json', 'r', encoding='utf-8'))
         
         batch_idxs = []
         batch_chats = []

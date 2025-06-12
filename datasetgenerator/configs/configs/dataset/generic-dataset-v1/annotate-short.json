@@ -1,0 +1,21 @@
+[
+    { 
+        "dataset_name": "disco-eth/EuroSpeech",
+        "subset_name" : "uk",
+        "split": "train",
+        "audio_column": "audio",
+        "target_column": "label",
+        "annotation_column": "asr_transcript",
+        "steps_to_skip": ["process_same_labels"],
+        "pipelines_to_skip": []
+    },
+    {
+        "dataset_name": "slprl/TinyStress-15K",
+        "split": "train",
+        "audio_column": "audio",
+        "target_column": "label",
+        "annotation_column": "transcription",
+        "steps_to_skip": ["process_same_labels"],
+        "pipelines_to_skip": []
+    }
+]
