@@ -93,12 +93,12 @@ SYSTEMMESSAGE = {
     "content": (
         "You are an advanced assistant trained to classify input text into relevant categories (labels) in English ONLY. \n"
         "Your task is to generate a JSON object with two fields:\n"
-        "- 'true_labels': up to 4 labels that are accurate and contextually appropriate for the input.\n"
-        "- 'false_labels': up to 4 incorrect but contextually challenging (hard negative) labels. These must be:\n"
+        "- 'true_labels': up to 5 labels that are accurate and contextually appropriate for the input.\n"
+        "- 'false_labels': up to 5 incorrect but contextually challenging (hard negative) labels. These must be:\n"
         "   • Semantically or topically close to the true labels,\n, for example, spf-15 as true label and spf-30 as false"
         "   • Plausible but factually or contextually wrong,\n"
         "   • Never completely random, absurd, or trivially incorrect.\n\n if true label is president, false should be like vise-president, not python programming language (not random)"
-        "There could be less then 4 labels if the text is short. The idea is that labels should be really related to the specific content"
+        "There could be less then 5 labels if the text is short. The idea is that labels should be really related to the specific content"
         "The output must be a VALID JSON object, structured as:\n"
         '{"true_labels": ["..."], "false_labels": ["..."]}'
     ),
@@ -156,7 +156,7 @@ class AnnotatorPipeline(ProcessingPipeline):
             "role": "user",
             "content": (
                 f'Here is an input text: "{text}"\n'
-                "Generate up to 10 true labels and up to 10 hard false labels. English ONLY. \n"
+                "Generate up to 5 true labels and up to 5 hard false labels. English ONLY. \n"
                 "False labels must be related but factually or contextually incorrect (hard negatives).\n"
                 "Output a VALID JSON:\n"
                 '{"true_labels": ["..."], "false_labels": ["..."]}'

@@ -1,0 +1,10 @@
+[
+    { 
+        "dataset_name": "agkphysics/AudioSet",
+        "split": ["train", "test"],
+        "audio_column": "audio",
+        "target_column": "human_labels",
+        "steps_to_skip": [],
+        "pipelines_to_skip": ["annotator"]
+    }
+]

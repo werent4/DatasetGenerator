@@ -23,6 +23,6 @@ from datasetgenerator.processors import HuggingFaceProcessor
 from datasets import Audio, load_dataset
 
 # configs = load_configs("datasetgenerator/configs/configs/gliclass-audio.json", "audio")
-pipelines, configs = load_configs("configs/configs/dataset/test.json", "configs/configs/processor/huggingface_processor.json", "audio")
+pipelines, configs = load_configs("configs/configs/dataset/generic-dataset-v1/annotate-large.json", "configs/configs/processor/huggingface_processor.json", "audio")
 processor= HuggingFaceProcessor(configs, pipelines=pipelines)
-processor.process(out_dataset_name="annotations-cv-mozila")
+processor.process(out_dataset_name="annotations-large")

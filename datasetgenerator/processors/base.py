@@ -65,11 +65,12 @@ class BaseProcessor(ABC):
 
                 config = items["config"]
                 dataset = items["dataset"]
-                dataset = self.extract_and_save_features(dataset, dataset_name, config, audio_dir)
-
+                
                 if config.pipelines_to_skip is not None and pipeline_name in config.pipelines_to_skip:
                     print(f"Skipping pipeline {pipeline.__class__.__name__} for dataset {dataset_name} due to configuration.")  
                     continue
+
+                dataset = self.extract_and_save_features(dataset, dataset_name, config, audio_dir)
 
                 print(f"Processing dataset: {dataset_name}")
                 processed_dataset = pipeline.apply(dataset, config, dataset_name)
@@ -107,7 +108,7 @@ class HuggingFaceProcessor(BaseProcessor):
             dataset = load_dataset(cfg.dataset_name, **kwargs)
             dataset = dataset.map(add_index, with_indices=True, batched=True, batch_size=16)
 
-            # dataset = dataset.select(range(min(len(dataset), 10)))
+            # dataset = dataset.select(range(min(len(dataset), 50)))
             # warnings.warn("dataset cropped to 100 samples or len(dataset) for testing", UserWarning)
 
             return dataset_identifier, dataset, cfg
@@ -128,50 +129,81 @@ class HuggingFaceProcessor(BaseProcessor):
         print(self.datasets)
 
     def extract_and_save_features(self, dataset, dataset_name, config, audio_dir):   
+        if dataset_name == "agkphysics/AudioSet_splittrain":
+            dataset = dataset.select(range(15700))
+            print("train cropped")
+
+        if dataset_name == "agkphysics/AudioSet_splittest":
+            dataset = dataset.select(range(6100))
+            print("train cropped")
+
         audio_paths = []
         srs = []
-        for example in tqdm(dataset, desc= f"Saving {dataset_name} audio arrays"):
-            idx = example["index"]
+        valid_indices = []
+        skipped_count = 0
+        
+        print(f"Processing {len(dataset)} examples...")
+        
+        for i, example in enumerate(tqdm(dataset, desc=f"Saving {dataset_name} audio arrays")):
+            try:
+                idx = example["index"]
+                audio_array = example[config.audio_column]['array']
+                sampling_rate = example[config.audio_column]['sampling_rate']
 
-            audio_array = example[config.audio_column]['array']
-            sampling_rate = example[config.audio_column]['sampling_rate']
-            srs.append(sampling_rate)
-
-            if len(audio_array) == 0:
-                warnings.warn(f"Empty audio array found for index {idx}. Creating a zero array.", UserWarning)
-                audio_array = np.zeros(16000) 
-
-            if isinstance(audio_array, np.ndarray):
-                audio_array = torch.from_numpy(audio_array)
-            elif isinstance(audio_array, list):
-                audio_array = torch.tensor(audio_array)
-            elif isinstance(audio_array, torch.Tensor):
-                pass  
-            else:
-                print(f"Warning: Unknown audio_array type {type(audio_array)} for index {idx}")
-                audio_array = torch.tensor(audio_array)
-
-
-            if isinstance(audio_array, torch.Tensor):
-                audio_hash = hashlib.md5(audio_array.numpy().tobytes()).hexdigest()
-            else:
-                audio_hash = hashlib.md5(audio_array.tobytes()).hexdigest()
-
-            audio_filename = f"{audio_hash}-{sampling_rate}.pt"
-            audio_path = os.path.join(audio_dir, audio_filename)
-            
-            torch.save(audio_array, audio_path)
-            audio_paths.append(audio_path)
-
+                if audio_array is None:
+                    warnings.warn(f"None audio array found for index {idx}. Skipping.", UserWarning)
+                    skipped_count += 1
+                    continue
+                    
+                srs.append(sampling_rate)
+                if len(audio_array) == 0:
+                    warnings.warn(f"Empty audio array found for index {idx}. Creating a zero array.", UserWarning)
+                    audio_array = np.zeros(16000) 
+                    
+                if isinstance(audio_array, np.ndarray):
+                    audio_array = torch.from_numpy(audio_array)
+                elif isinstance(audio_array, list):
+                    audio_array = torch.tensor(audio_array)
+                elif isinstance(audio_array, torch.Tensor):
+                    pass  
+                else:
+                    print(f"Warning: Unknown audio_array type {type(audio_array)} for index {idx}")
+                    audio_array = torch.tensor(audio_array)
+                    
+                if isinstance(audio_array, torch.Tensor):
+                    audio_hash = hashlib.md5(audio_array.numpy().tobytes()).hexdigest()
+                else:
+                    audio_hash = hashlib.md5(audio_array.tobytes()).hexdigest()
+                    
+                audio_filename = f"{audio_hash}-{sampling_rate}.pt"
+                audio_path = os.path.join(audio_dir, audio_filename)
+                
+                torch.save(audio_array, audio_path)
+                audio_paths.append(audio_path)
+                valid_indices.append(i)
+                
+            except Exception as e:
+                print(f"Error processing example {i}: {e}")
+                print(f"Skipping corrupted audio file at index {i}")
+                skipped_count += 1
+                continue
+        
+        print(f"Processed: {len(valid_indices)} valid examples")
+        print(f"Skipped: {skipped_count} corrupted/invalid examples")
+        
+        dataset = dataset.select(valid_indices)
+        
         if "audio_path" in dataset.column_names:
             dataset = dataset.remove_columns(["audio_path"])
         if "sampling_rate" in dataset.column_names:
             dataset = dataset.remove_columns(["sampling_rate"])
-
+            
         dataset = dataset.add_column("audio_path", audio_paths)
         dataset = dataset.add_column("sampling_rate", srs)
+        
+        print(f"Dataset size after aduio processing: {len(dataset)} examples")
         return dataset
-
+    
     def save_datasets(self, save_path):
         """Save the processed datasets to disk."""
 

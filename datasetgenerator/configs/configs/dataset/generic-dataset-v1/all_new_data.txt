@@ -14,9 +14,9 @@ asapp/slue - classes -- added -- processed
 cgeorgiaw/animal-sounds - classes -- added  -- processed
 
 disco-eth/EuroSpeech - annotate (40k) -- added -- processed
-agkphysics/AudioSet - annotate (140k)
+agkphysics/AudioSet - annotate (40k) -- added -- 
 AbstractTTS/PODCAST - annotate (150k)
-mozilla-foundation/common_voice_17_0 - annotate 
+mozilla-foundation/common_voice_17_0 - annotate -- processed
 slprl/TinyStress-15K - annotate (15k) -- added-- processed 
 ###
 
