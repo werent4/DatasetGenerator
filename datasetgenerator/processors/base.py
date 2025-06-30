@@ -129,14 +129,6 @@ class HuggingFaceProcessor(BaseProcessor):
         print(self.datasets)
 
     def extract_and_save_features(self, dataset, dataset_name, config, audio_dir):   
-        if dataset_name == "agkphysics/AudioSet_splittrain":
-            dataset = dataset.select(range(15700))
-            print("train cropped")
-
-        if dataset_name == "agkphysics/AudioSet_splittest":
-            dataset = dataset.select(range(6100))
-            print("train cropped")
-
         audio_paths = []
         srs = []
         valid_indices = []
