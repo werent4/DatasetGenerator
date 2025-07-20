@@ -19,153 +19,159 @@ import webdataset as wds
 from datasets import Dataset, DatasetDict, load_dataset
 from huggingface_hub import HfFileSystem, get_token, hf_hub_url, list_repo_files
 from tqdm import tqdm
-random.seed(42)
 
-#v4
-# def create_label_dataset_sets_scalable_4(df, min_additional_labels=2, max_additional_labels=8):
-#     """
-#     Create label datasets with true and additional random labels.
+# v1
+def create_label_dataset(df: pd.DataFrame, 
+                        min_additional_labels: int = 2, 
+                        max_additional_labels: int = 8) -> pd.DataFrame:
+    result_df = df.copy()
+    result_df = result_df.rename(columns={'caption': 'text'})
+    all_captions = df['caption'].unique().tolist()
+    true_labels_list = []
+    all_labels_list = []
     
-#     Args:
-#         df (pd.DataFrame): Input dataframe with 'caption' column containing text labels
-#         min_additional_labels (int, optional): Minimum number of additional random labels to add. Defaults to 2.
-#         max_additional_labels (int, optional): Maximum number of additional random labels to add. Defaults to 8.
-    
-#     Returns:
-#         pd.DataFrame: Modified dataframe with additional columns:
-#             - 'text': Renamed from 'caption'
-#             - 'true_labels': List containing the original caption
-#             - 'all_labels': List containing true label plus randomly selected additional labels (shuffled)
-    
-#     Example:
-#         >>> df = pd.DataFrame({'caption': ['dog barking', 'cat meowing', 'bird singing']})
-#         >>> result = create_label_dataset_sets_scalable_4(df, min_additional_labels=1, max_additional_labels=2)
-#         >>> print(result.columns)
-#         Index(['text', 'true_labels', 'all_labels'], dtype='object')
-#     """
-#     print("v4")
-#     df = df.rename(columns={'caption': 'text'})
-    
-#     unique_captions = df['text'].unique()
-#     caption_to_idx = {cap: idx for idx, cap in enumerate(unique_captions)}
-#     n_unique = len(unique_captions)
-    
-#     print(f"Found {n_unique} unique captions out of {len(df)} rows")
-    
-#     def get_idx(current_idx, selected):
-#         while True:
-#             idx = random.randint(0, n_unique-1)
-#             if idx != current_idx and idx not in selected:
-#                 return idx
-
-#     def generate_labels_for_text(text):
-#         true_labels = [text]
-#         current_idx = caption_to_idx[text]
-
-#         num_additional = random.randint(min_additional_labels, max_additional_labels)
-#         selected_indices = []
+    for idx, row in result_df.iterrows():
+        current_caption = row['text']
         
-#         for _ in range(num_additional):
-#             selected_indices.append(get_idx(current_idx, selected_indices))
-
-#         additional_labels = [unique_captions[idx] for idx in selected_indices]
+        true_labels = [current_caption]
         
-#         all_labels = true_labels + additional_labels
-#         random.seed(42)
-#         random.shuffle(all_labels)
-        
-#         return true_labels, all_labels
-    
-#     tqdm.pandas(desc="Generating labels")
-#     label_data = df['text'].progress_apply(generate_labels_for_text)
-    
-#     df['true_labels'] = [x[0] for x in label_data]
-#     df['all_labels'] = [x[1] for x in label_data]
-    
-#     return df
-
-def process_labels(x):
-    if isinstance(x, np.ndarray):
-        return x.tolist()
-    elif isinstance(x, list):
-        return x
-    else:
-        print("lol 1 label")
-        return [x] 
-
-def create_label_dataset_sets_scalable_4(df, text_col, min_additional_labels=2, max_additional_labels=8):
-    print("v4")
-    tqdm.pandas(desc="Collecting unique labels")
-    all_labels = set()
-    for label_list in df[text_col].progress_apply(process_labels):
-        all_labels.update(label_list)
-
-    unique_labels = list(all_labels)
-    label_to_idx = {label: idx for idx, label in enumerate(unique_labels)}
-    n_unique = len(label_to_idx)
-    print(f"Found {n_unique} unique labels out of {len(df)} rows")
-    
-    def get_idx(current_idx, selected):
-        while True:
-            idx = random.randint(0, n_unique-1)
-            if idx not in current_idx and idx not in selected:
-                return idx
-
-    def generate_labels_for_text(text_list):
-        if isinstance(text_list, np.ndarray):
-            true_labels = text_list.tolist()
-        elif isinstance(text_list, list):
-            true_labels = text_list.copy()
-        else:
-            true_labels = [text_list]
-
-        current_idxs = [label_to_idx[label] for label in true_labels]
-
         num_additional = random.randint(min_additional_labels, max_additional_labels)
-        selected_indices = []
+        other_captions = [cap for cap in all_captions if cap != current_caption]
         
-        for _ in range(num_additional):
-            selected_indices.append(get_idx(current_idxs, selected_indices))
-
-        additional_labels = [unique_labels[idx] for idx in selected_indices]
+        if len(other_captions) >= num_additional:
+            additional_labels = random.sample(other_captions, num_additional)
+        else:
+            additional_labels = other_captions
         
         all_labels = true_labels + additional_labels
-        random.seed(42)
+        
+        random.shuffle(all_labels)
+        
+        true_labels_list.append(true_labels)
+        all_labels_list.append(all_labels)
+    
+    result_df['true_labels'] = true_labels_list
+    result_df['all_labels'] = all_labels_list
+    
+    return result_df
+
+# v2
+def create_label_dataset_sets(df: pd.DataFrame,
+                                   min_additional_labels: int = 2,
+                                   max_additional_labels: int = 8) -> pd.DataFrame:
+    result_df = df.copy()
+    result_df = result_df.rename(columns={'caption': 'text'})
+    
+    all_captions_set = set(df['caption'].unique())
+    print(f"Found {len(all_captions_set)} unique captions")
+    
+    def generate_labels_fast(text):
+        true_labels = [text]
+        num_additional = random.randint(min_additional_labels, max_additional_labels)
+        
+        other_captions_set = all_captions_set - {text}
+        
+        if len(other_captions_set) >= num_additional:
+            other_captions_list = list(other_captions_set)
+            additional_labels = random.sample(other_captions_list, num_additional)
+        else:
+            additional_labels = list(other_captions_set)
+            
+        all_labels = true_labels + additional_labels
         random.shuffle(all_labels)
         
         return true_labels, all_labels
     
     tqdm.pandas(desc="Generating labels")
-    label_data = df[text_col].progress_apply(generate_labels_for_text)
+    label_data = result_df['text'].progress_apply(generate_labels_fast)
+    
+    result_df['true_labels'] = [x[0] for x in label_data]
+    result_df['all_labels'] = [x[1] for x in label_data]
+    
+    return result_df
+
+# v3
+def create_label_dataset_sets_scalable(df, min_additional_labels=2, max_additional_labels=8):
+    print("v3")
+    df = df.rename(columns={'caption': 'text'})
+    
+    unique_captions = df['text'].unique()
+    caption_to_idx = {cap: idx for idx, cap in enumerate(unique_captions)}
+    n_unique = len(unique_captions)
+    
+    print(f"Found {n_unique} unique captions out of {len(df)} rows")
+    
+    def generate_labels_for_text(text):
+        true_labels = [text]
+        current_idx = caption_to_idx[text]
+        
+        available_indices = np.concatenate([
+            np.arange(current_idx),
+            np.arange(current_idx + 1, n_unique)
+        ])
+        
+        num_additional = random.randint(min_additional_labels, max_additional_labels)
+        num_to_select = min(num_additional, len(available_indices))
+        
+        selected_indices = np.random.choice(available_indices, size=num_to_select, replace=False)
+        additional_labels = [unique_captions[idx] for idx in selected_indices]
+        
+        all_labels = true_labels + additional_labels
+        random.shuffle(all_labels)
+        
+        return true_labels, all_labels
+    
+    tqdm.pandas(desc="Generating labels")
+    label_data = df['text'].progress_apply(generate_labels_for_text)
     
     df['true_labels'] = [x[0] for x in label_data]
     df['all_labels'] = [x[1] for x in label_data]
     
     return df
 
-def extract_and_save_features(dataset, audio_dir):  
-    """
-    Extract audio arrays from dataset and save them as PyTorch tensors to disk.
-        
-    Args:
-        dataset (pd.DataFrame): DataFrame containing audio data with columns:
-            - 'id': Unique identifier for each sample
-            - 'audio': Audio array data (numpy array, list, or torch tensor)
-            - 'sample_rate': Audio sampling rate
-        audio_dir (str): Directory path where audio tensor files will be saved
+#v4
+def create_label_dataset_sets_scalable_4(df, min_additional_labels=2, max_additional_labels=8):
+    print("v4")
+    df = df.rename(columns={'caption': 'text'})
     
-    Returns:
-        pd.DataFrame: Filtered dataset with corrupted samples removed and new columns:
-            - 'audio_path': Path to saved audio tensor file
-            - 'sampling_rate': Audio sampling rate
-            - Removes columns: 'audio_path', 'sampling_rate', 'audio' if they existed
+    unique_captions = df['text'].unique()
+    caption_to_idx = {cap: idx for idx, cap in enumerate(unique_captions)}
+    n_unique = len(unique_captions)
     
-    Raises:
-        UserWarning: When empty audio arrays are found (replaced with zero arrays)
+    print(f"Found {n_unique} unique captions out of {len(df)} rows")
+    
+    def get_idx(current_idx, selected):
+        while True:
+            idx = random.randint(0, n_unique-1)
+            if idx != current_idx and idx not in selected:
+                return idx
+
+    def generate_labels_for_text(text):
+        true_labels = [text]
+        current_idx = caption_to_idx[text]
+
+        num_additional = random.randint(min_additional_labels, max_additional_labels)
+        selected_indices = []
         
-    Note:
-        - Zero arrays are marked with '-zeros' suffix in filename, please check your data for `-zeros.pt`
-    """ 
+        for _ in range(num_additional):
+            selected_indices.append(get_idx(current_idx, selected_indices))
+
+        additional_labels = [unique_captions[idx] for idx in selected_indices]
+        
+        all_labels = true_labels + additional_labels
+        random.shuffle(all_labels)
+        
+        return true_labels, all_labels
+    
+    tqdm.pandas(desc="Generating labels")
+    label_data = df['text'].progress_apply(generate_labels_for_text)
+    
+    df['true_labels'] = [x[0] for x in label_data]
+    df['all_labels'] = [x[1] for x in label_data]
+    
+    return df
+
+def extract_and_save_features(dataset, audio_dir):   
     audio_paths = []
     srs = []
     valid_indices = []
@@ -235,7 +241,7 @@ def save_dataset(dataset, save_path, dataset_identifier = "laion/LAION-Audio-300
   for idx, row in tqdm(dataset.iterrows(), total=len(dataset)):
       idx = row["id"]   
       audio_path = row["audio_path"]
-    #   text = row["text"]
+      text = row["text"]
       sample_rate = row["sampling_rate"]
       true_labels = row["true_labels"]
       all_labels = row["all_labels"]
@@ -246,45 +252,27 @@ def save_dataset(dataset, save_path, dataset_identifier = "laion/LAION-Audio-300
           true_labels = [label.lower() for label in true_labels]
       all_labels = [label.lower() for label in all_labels]
 
-      random.seed(42)
       random.shuffle(all_labels)
       row = {
           "id": idx,
           "source_dataset": dataset_identifier,
           "audio_path": audio_path,
-        #   "text": text,
+          "text": text,
           "sample_rate" : sample_rate,
           "all_labels": all_labels,
           "true_labels": true_labels,
       }
       dataset_list.append(row)
 
-  random.seed(42)
   random.shuffle(dataset_list)
   print("total_examples:", len(dataset_list))
   with open(os.path.join(save_path, f"{dataset_identifier.replace('/', '-')}.json"), "w") as f:
-      json.dump(dataset_list, f, indent= 2)
+      json.dump(dataset_list, f, indent=4)
 
   print("data saved to: ", os.path.join(save_path, f"{dataset_identifier.replace('/', '-')}.json"))
 
 class DatasetLoader:
-  """
-    A class for loading and sampling data from Hugging Face datasets stored as tar files.
-
-    This loader provides methods to sample subsets of data from large audio datasets
-    that are distributed across multiple tar files on Hugging Face Hub.
-
-    Attributes:
-        repo_id (str): Hugging Face repository identifier
-        tars (List[str]): List of tar file paths in the repository
-        
-    Example:
-        >>> loader = DatasetLoader("laion/LAION-Audio-300M")
-        >>> df = loader.load_subset(total_size=1000, split_accros_tars=True)
-        >>> print(f"Loaded {len(df)} samples")
-  """
   def __init__(self, repo_id: str):
-    warnings.warn(f"Class {self.__class__.__name__} will fast reach hf rate limit\nPlease consider to use WebDataset based loader")
     self.repo_id = repo_id
     self.tars = self.load_tars()
     print("Total tars: ", len(self.tars))
@@ -393,41 +381,17 @@ class DatasetLoader:
       return pd.DataFrame()
 
 class WebDatasetLoader:
-    """
-    Loader for large-scale audio datasets using WebDataset format.
-    
-    This loader uses the webdataset library to efficiently stream and process data from
-    Hugging Face repositories containing tar-compressed audio datasets. It supports
-    resumable loading, duplicate detection.
-    
-    Attributes:
-        repo_id (str): Hugging Face repository identifier
-        fs (HfFileSystem): Hugging Face filesystem interface
-        urls (List[str]): List of authenticated URLs to tar files
-        
-    Example:
-        >>> loader = WebDatasetLoader("laion/LAION-Audio-300M", specific_tars_range=50)
-        >>> df = loader.load_subset(1000, "./audio_dir", existing_dataset_path="existing.json")
-        >>> print(f"Loaded {len(df)} new samples")
-    """
-    def __init__(self, repo_id: str, specific_tars_range = -1):
-        """
-        Args:
-            repo_id (str): Hugging Face repository identifier
-            specific_tars_range (int, optional): Limit number of tar files to process.
-                If -1, processes all available tar files. Defaults to -1.
-        """
+    def __init__(self, repo_id: str):
         self.repo_id = repo_id
         self.fs = HfFileSystem()
-        self.setup_urls(specific_tars_range)
+        self.setup_urls()
     
-    def setup_urls(self, specific_tars_range):
+    def setup_urls(self):
         files = [self.fs.resolve_path(path) for path in self.fs.glob(f"hf://datasets/{self.repo_id}/**/*.tar")]
         self.urls = [hf_hub_url(file.repo_id, file.path_in_repo, repo_type="dataset") for file in files]
         print(f"Found {len(self.urls)} tar files")
-        self.urls = sorted(self.urls) 
-        if specific_tars_range > 0:
-            self.urls = self.urls[0:specific_tars_range]
+        random.shuffle(self.urls) 
+        # self.urls = self.urls[900:1100]
 
     def create_webdataset_url(self, url_subset):
         token = get_token()
@@ -452,7 +416,7 @@ class WebDatasetLoader:
                 return json.loads(data.decode("utf-8"))
             except Exception as e:
                 print(f"Error decoding metadata: {e}")
-                return {"Flash 2.5 Annotation": ""}
+                return {"caption": ""}
 
     @backoff.on_exception(
         backoff.expo,
@@ -461,117 +425,40 @@ class WebDatasetLoader:
         max_time=120,
         jitter=backoff.full_jitter
     )
-    def sample_from_tar_urls(self, url: str, samples_per_tar: int, processed_ids: list[int|str]=None):
-        """
-        Sample data from tar URLs using WebDataset with duplicate detection and retry logic.
+    def sample_from_tar_urls(self, url, samples_per_tar):
+        time.sleep(random.uniform(0.1, 0.5))
         
-        Args:
-            url (str): tar file URL to process
-            samples_per_tar (int): Maximum number of samples to collect in 1 tar
-            processed_ids (Optional[Set[str]]): Set of already processed sample IDs to skip
-        
-        Returns:
-            pd.DataFrame: DataFrame with sampled data containing:
-                - 'id': Unique sample identifier
-                - 'audio': Audio array data
-                - 'sample_rate': Audio sampling rate
-                - 'caption': Text caption/transcription
-        """
-        time.sleep(random.uniform(0.01, 0.3))
-
-        if processed_ids is None:
-            processed_ids = set()
-
         try:
             urls_with_auth = self.create_webdataset_url(url)
             
             dataset = (wds.WebDataset(urls_with_auth, shardshuffle=False)
                       .decode()
-                      .to_tuple("mp3", "json")
+                      .to_tuple("audio.mp3", "metadata.json")
                       .map(lambda x: (self.decode_audio(x[0]), self.decode_metadata(x[1]))))
             
             samples = []
-            skipped_count = 0
             for i, (audio_data, metadata) in enumerate(dataset):
-                sample_id = f"{url[0].split('/')[-1]}_{i}"
-                if sample_id in processed_ids:
-                    skipped_count += 1
-                    continue
-                
-                if len(samples) >= samples_per_tar:
+                if i >= samples_per_tar:
                     break
                     
-                captions_list = []
-                flash_annotation = metadata.get("Flash 2.5 Annotation", "")
-                if flash_annotation:
-                    caption = flash_annotation.get("caption", "")
-                    interpretation = flash_annotation.get("interpretation", "")
-                    if caption.strip() and caption is not None:
-                        captions_list.append(caption)
-                    if caption.strip() and caption is not None:
-                        captions_list.append(interpretation)
-                else:
-                    warnings.warn(f"No caption or transcription found for {sample_id}")
-                    print("set caption to []")
-
+                sample_id = f"{url[0].split('/')[-1]}_{i}"
                 samples.append({
                     "id": sample_id,
                     'audio': audio_data["array"],
                     "sample_rate": audio_data["sampling_rate"],
-                    'caption': captions_list
+                    'caption': metadata.get("caption", "<<NOTFOUND>>"),
                 })
-            if skipped_count > 0:
-                print(f"Skipped {skipped_count} already processed samples from {url[0].split('/')[-1]}")
             
-            print(f"Collected {len(samples)} new samples from {url[0].split('/')[-1]}")
             return pd.DataFrame(samples)
             
         except Exception as e:
             print(f"Error processing tar batch: {e}")
             return pd.DataFrame()
 
-    def load_existing_ids(self, existing_dataset_path: str) -> set:
-        if not os.path.exists(existing_dataset_path):
-            return set()
-        
-        try:
-            with open(existing_dataset_path, 'r') as f:
-                existing_data = json.load(f)
-            return set(item['id'] for item in tqdm(existing_data, desc="collecting existing IDs"))
-        except Exception as e:
-            print(f"Error loading existing IDs: {e}")
-            return set()
-
-    def load_subset(self, total_size: int, audio_dir: str, split_accros_tars: bool = True,
-                    processed_ids: list[int|str]=None, existing_dataset_path: str=None):
-        """
-        Load a subset of data with audio feature extraction and duplicate detection.
-        
-        Args:
-            total_size (int): Target number of samples to load
-            audio_dir (str): Directory to save extracted audio features
-            split_accros_tars (bool, optional): Whether to distribute loading across tar files.
-                Currently only supports True. Defaults to True.
-            processed_ids (Optional[Set[str]]): Set of sample IDs to skip (for resuming)
-            existing_dataset_path (Optional[str]): Path to existing dataset file to load IDs from
-        
-        Returns:
-            pd.DataFrame: DataFrame containing loaded samples with audio paths and metadata
-        
-        Raises:
-            ValueError: If split_accros_tars is False (not implemented)
-        """
+    def load_subset(self, total_size, audio_dir, split_accros_tars = True):
         if not split_accros_tars:
             raise ValueError("I didnt implemented specific splitting yet")
         
-        if processed_ids is None:
-            processed_ids = set()
-            
-        if existing_dataset_path:
-            existing_ids = self.load_existing_ids(existing_dataset_path)
-            processed_ids.update(existing_ids)
-            print(f"Loaded {len(existing_ids)} existing IDs to skip")
-            
         data_per_tar = math.ceil(total_size / len(self.urls))
         print(f"Loading ~{data_per_tar} samples per tar file to reach total of {total_size}")
 
@@ -586,14 +473,11 @@ class WebDatasetLoader:
             remaining = total_size - total_loaded
             samples_to_load = min(data_per_tar, remaining)
 
-            df = self.sample_from_tar_urls([url], samples_to_load, processed_ids= processed_ids)
+            df = self.sample_from_tar_urls([url], samples_to_load)
             if not df.empty:
                 audio_paths_saved_subset = extract_and_save_features(df, audio_dir)
                 all_samples.append(audio_paths_saved_subset)
                 total_loaded += len(audio_paths_saved_subset)
-
-                new_ids = set(audio_paths_saved_subset['id'].tolist())
-                processed_ids.update(new_ids)
                 print(f"Successfully loaded {len(audio_paths_saved_subset)} samples from batch")
             else:
                 print(f"No data loaded from batch")
@@ -612,22 +496,18 @@ class WebDatasetLoader:
 
 
 if __name__ == "__main__":
-  processed_ids = json.load(open("/mnt/storage-werent4-2tb/generic-dataset/IDS/laion-laion-generated-sound-events_splittrain_ids.json", "r", encoding="utf-8"))
-  processed_ids = set(processed_ids)
-  print("Already processed: ", len(processed_ids))
+  dataset_identifier = "laion/LAION-Audio-300M_splittrain"
+  dataset_name = "laion/LAION-Audio-300M"
+  samples_count = 1_001_000
 
-  dataset_name = "laion/generated-sound-events"
-  dataset_identifier = "laion/generated-sound-events_splittrain-540k-324k-378k"
-  samples_count = 54000#0
-
-  save_path = "/mnt/storage-werent4-2tb/generic-dataset/r-classes-generated-sound-events_splittrain-540k-324k-378k"
+  save_path = "/mnt/storage-werent4-2tb/generic-dataset/LAION-Audio-300M_splittrain-1M"
   audio_dir = os.path.join(save_path, f"audio_features_{dataset_identifier.replace('/', '-')}")
 
   os.makedirs(save_path, exist_ok= True)
   os.makedirs(audio_dir, exist_ok= True)
 
-  dataset_loader = WebDatasetLoader(dataset_name, specific_tars_range =-1)
-  sampled_subset = dataset_loader.load_subset(samples_count, audio_dir, split_accros_tars= True, processed_ids= processed_ids)
-  labels_sampled_subset = create_label_dataset_sets_scalable_4(sampled_subset, "caption", max_additional_labels= 20)
+  dataset_loader = WebDatasetLoader(dataset_name)
+  sampled_subset = dataset_loader.load_subset(samples_count, audio_dir, split_accros_tars= True)
+  labels_sampled_subset = create_label_dataset_sets_scalable_4(sampled_subset, max_additional_labels= 20)
 
   save_dataset(labels_sampled_subset, save_path, dataset_identifier)
